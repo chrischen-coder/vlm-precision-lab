@@ -10,7 +10,7 @@
 ## 使用
 
 ```bash
-pip install git+https://github.com/chrischen-coder/vlm-precision-lab.git@v0.2.0
+python -m pip install git+https://github.com/crown-sports/vlm-precision-lab.git@v0.3.0
 precisionlab evaluate --dataset samples.jsonl \
   --endpoint http://localhost:8000/v1 --model model \
   --concurrency 4 --output runs/quantized
