@@ -36,3 +36,11 @@ API 指纹核对请求，不能证明服务器内部张量或权重相同。
 [原始实验](experiments/results/2026-10-03/) · [真实数据导入记录](experiments/results/2026-10-04/cord-import.json) · [GPU 复现](docs/reproduce.md)
 
 代码 Apache-2.0；模型与外部数据沿用各自许可。
+
+## 基线回归门禁
+
+```bash
+precisionlab regression-gate --dataset samples.jsonl --reference runs/bf16 --candidate runs/quantized --constraints regression-targets.json --output runs/regression-decision.json
+```
+
+约束示例：`{"max_task_regressions":{"receipt_total.total_price":0},"max_task_loss_pp":{"receipt_total.total_price":2},"min_source_groups":30}`。字段名与数据集 task 对应。即使总体准确率不变，只要关键字段新增错误超过上限就拒绝，报告列出具体样本。先复核两份服务运行记录、请求哈希与对照参数；缺少要求的字段也拒绝。通过退出 0，未通过退出 2，输出文件必须不存在。绝对准确率和延迟预算继续用 `gate` 检查。统计区间仅作描述，不声称非劣性保证或服务器权重身份验证。失败请求即使留下正确文本，也计为错误。
