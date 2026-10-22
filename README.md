@@ -1,21 +1,31 @@
 # VLM Precision Lab
 
-**See which image answers broke when a vision model changed, then decide against your quality and service budgets.**
+Compare two vision-model runs and inspect the answers that changed.
 
-[中文](README.zh-CN.md) · [Recorded demo](https://crown-sports.github.io/vlm-precision-lab/) · [Value and evidence](docs/product.md) · [Service guide](docs/service-evaluation.md)
+[中文](README.zh-CN.md) · [Browse the recorded demo](https://crown-sports.github.io/vlm-precision-lab/) · [Service evaluation](docs/service-evaluation.md) · [v0.3.0 preview](https://github.com/crown-sports/vlm-precision-lab/releases/tag/v0.3.0)
 
-For engineers comparing a baseline with a quantized model or a new serving setup.
-Smaller weights do not guarantee a faster deployment. Average accuracy can also
-stay unchanged while a critical receipt field becomes wrong.
+When you change a model, quantization or serving settings, an average score only
+tells part of the story. Precision Lab pairs the same questions across runs,
+shows the changed answers, and checks quality and latency limits you choose.
 
-Get a paired HTML report with the actual failing samples, plus JSON decisions
-for absolute quality/latency limits and newly introduced errors. Choose the
-requirements before evaluating the candidate.
+## One answer, two different checks
 
-## First result: replay a saved comparison on CPU
+![A saved graph question: BF16 answers B,D; AWQ answers D,B. Both identify the right endpoints, but only BF16 follows the requested order](docs/figures/recorded-case.png)
 
-Python 3.11+. This route uses included images and historical predictions; it needs
-no GPU, model download, running service or API key.
+*Qwen3-VL-8B, recorded on 2026-10-03 with a generated diagnostic image. The question asks for alphabetical order.*
+
+Here `D,B` names the correct nodes but breaks the requested format. Across the
+100 graph questions, **strict exact match falls from 41% to 33%**, while
+**unordered endpoint correctness rises from 50% to 53%**. The 11 new strict
+failures are all format violations; there are **zero new semantic endpoint errors**.
+
+![Historical comparison showing strict graph exact match 41 to 33 percent and semantic endpoint correctness 50 to 53 percent; both OCR tasks stay at 100 percent](docs/figures/p1-awq-metrics.png)
+
+*Saved HF predictions on 300 generated questions from 150 source groups. Both OCR tasks stay at 100%. [Experiment details](experiments/results/2026-10-03/README.md).*
+
+## Replay the comparison on CPU
+
+Python 3.11+. The images and saved predictions are included; no GPU or API key is needed.
 
 ```bash
 git clone --branch v0.3.0 https://github.com/crown-sports/vlm-precision-lab.git
@@ -23,8 +33,7 @@ cd vlm-precision-lab
 python -m venv .venv
 ```
 
-Activate with `source .venv/bin/activate` on macOS/Linux or `.venv\Scripts\Activate.ps1`
-in Windows PowerShell, then:
+Activate with `source .venv/bin/activate` on macOS/Linux or `.venv\Scripts\Activate.ps1` in PowerShell, then:
 
 ```bash
 python -m pip install .
@@ -34,24 +43,14 @@ precisionlab compare --dataset examples/diagnostic-v2/samples.jsonl \
   --output replay.html
 ```
 
-Open `replay.html` in a browser. Expected: **300 questions, 150 source groups**.
-For the graph task, **literal exact match falls from 41% to 33%**: 11 new format
-violations and 3 recoveries. All 11 still name the correct endpoint set; for
-example `B,D` becomes `D,B`, violating the requested alphabetical order.
-**Endpoint-set correctness rises from 50% to 53%, with no new semantic endpoint
-errors.** Both OCR tasks stay at 100%. This example shows an output-format
-regression, not evidence of worse graph understanding; inspect both measures.
+Open `replay.html` to inspect the comparison. This replays historical predictions;
+it does not run the model again. Use a different filename to keep previous reports.
 
-This recomputes a report from saved HF model predictions on **generated diagnostic
-images**. It is not a new GPU benchmark, real-receipt evaluation or service release
-gate. [Original experiment and limits](experiments/results/2026-10-03/README.md).
-Use a new report filename to retain previous comparisons.
+## Evaluate your service
 
-## Then evaluate your own deployment
-
-Prepare labeled image questions and explicit targets using the
-[complete input format and service protocol](docs/service-evaluation.md).
-Start a compatible streaming vision chat service, then:
+Prepare labeled image questions and your quality/latency targets using the
+[input format and service guide](docs/service-evaluation.md). With a compatible
+streaming vision chat service running:
 
 ```bash
 precisionlab evaluate --dataset samples.jsonl \
@@ -61,13 +60,12 @@ precisionlab gate --dataset samples.jsonl --run runs/quantized \
   --constraints targets.json --output runs/decision.json
 ```
 
-Here `samples.jsonl` and `targets.json` are **your files**, not bundled demo paths.
-`evaluate` saves predictions, observed timings and a manifest. `gate` exits **0**
-when observed requirements pass, **2** when they fail. Failed requests remain in
-the accuracy denominator. Review unconstrained tasks before relying on a decision.
+`samples.jsonl` and `targets.json` are your own files. The run saves predictions,
+timings and input hashes. Failed requests still count in the accuracy denominator.
+`gate` returns `0` when the observed requirements pass, `2` when they fail.
 
-To block new critical errors, create **both** reference and candidate runs using
-`evaluate` with matching comparison controls, then:
+To catch a new mistake even when the overall score stays the same, run `evaluate`
+for both the reference and candidate with matching controls, then:
 
 ```bash
 precisionlab regression-gate --dataset samples.jsonl \
@@ -75,34 +73,21 @@ precisionlab regression-gate --dataset samples.jsonl \
   --constraints regression-targets.json --output runs/regression-decision.json
 ```
 
-Example constraint: `{"max_task_regressions":{"receipt_total_price":0}}`.
-The task name must match your dataset. The report lists newly failing sample IDs;
-missing required tasks fail. Exit **0** means pass, **2** means fail, and the
-output file must be new. Use `gate` as well for absolute quality and service
-budgets. The historical HF replay above cannot substitute for these service runs.
+For example, `{"max_task_regressions":{"receipt_total_price":0}}` blocks newly
+wrong answers in that task. Use a task name from your dataset and a new output
+filename. Pass/fail exits are `0`/`2`; use `gate` alongside this for absolute limits.
+The historical HF files above are for replay, not these service gates.
 
-## Why the checks are useful
+## More experiments
 
-| Decision risk | Current behavior | Evidence |
-| --- | --- | --- |
-| Recoveries conceal new critical errors | Paired sample and task regression limits | [Equal-score regression test](tests/test_regression_gate.py) |
-| Inputs or run controls changed unnoticed | Verify saved hashes and regenerate request fingerprints | [Provenance](src/precisionlab/provenance.py), [evidence tests](tests/test_evidence.py) |
-| Failed work disappears from a summary | Count failures and recompute budgets from individual requests | [Service tests](tests/test_serving.py), [metric definitions](docs/service-evaluation.md) |
+The recorded AWQ run reduced weight files from **17.53 to 7.22 GB**, but its HF
+peak allocated memory rose from **16.47 to 20.26 GiB**. The runtime matters too.
+[Raw runs and reproduction](docs/reproduce.md).
 
-Source-group intervals are descriptive. A passing gate is not a statistical
-noninferiority guarantee or proof of hidden server weight identity. AWQ uses
-[LLM Compressor](https://github.com/vllm-project/llm-compressor); this project
-contributes evaluation and evidence handling, not a new quantization method.
-[Current advantages, limits and future evidence to accumulate](docs/product.md).
+CORD-v2 import includes 100 receipts and 273 field questions; model predictions
+on those receipts and controlled vLLM GPU benchmarks are still pending.
+A passing gate describes the measured run, not a guarantee about future traffic.
 
-## Recorded evidence
+[Metric definitions](docs/service-evaluation.md) · [Implementation notes](docs/product.md) · [Tests](tests/) · [Changelog](CHANGELOG.md)
 
-- CPU regression tests cover the client, failure handling, evidence checks and gates.
-- CORD-v2 import verified **100 receipts and 273 field questions**, with pinned source hashes.
-- Earlier Qwen3-VL-8B AWQ files: **17.53 → 7.22 GB**; HF peak allocated memory:
-  **16.47 → 20.26 GiB**. Smaller files did not mean lower peak memory in that run.
-
-**CORD model predictions and controlled vLLM GPU benchmarks are not yet recorded.**
-[Raw experiment evidence](experiments/results/2026-10-03/) · [Import receipts](docs/service-evaluation.md#receipt-data) · [GPU reproduction](docs/reproduce.md)
-
-Apache-2.0. External models and datasets retain their own licenses.
+Apache-2.0. AWQ uses [LLM Compressor](https://github.com/vllm-project/llm-compressor); external models and datasets retain their own licenses.
