@@ -21,7 +21,7 @@ flowchart LR
 Start your vision chat service, then run:
 
 ```bash
-pip install git+https://github.com/chrischen-coder/vlm-precision-lab.git@v0.2.0
+python -m pip install git+https://github.com/crown-sports/vlm-precision-lab.git@v0.3.0
 precisionlab evaluate --dataset samples.jsonl \
   --endpoint http://localhost:8000/v1 --model model \
   --concurrency 4 --output runs/quantized
@@ -32,6 +32,28 @@ precisionlab gate --dataset samples.jsonl --run runs/quantized \
 `gate` exits **0** when the observed targets pass, **2** when they fail.
 Choose task and latency targets for your workload; [input format and examples](docs/service-evaluation.md) are documented.
 To compare two runs, use `precisionlab compare` with their prediction files.
+
+## Block new critical errors against a baseline
+
+A candidate can recover one receipt and break another while keeping average
+accuracy unchanged. The paired regression gate checks **new errors per task**:
+
+```bash
+precisionlab regression-gate --dataset samples.jsonl \
+  --reference runs/bf16 --candidate runs/quantized \
+  --constraints regression-targets.json --output runs/regression-decision.json
+```
+
+Example targets: `{"max_task_regressions":{"receipt_total.total_price":0},"max_task_loss_pp":{"receipt_total.total_price":2},"min_source_groups":30}`.
+The task name must match your dataset. The command validates both saved service
+runs, request fingerprints and matching comparison controls, then records every
+newly failing sample. Exit `0` means the observed regression limits pass; `2`
+means they fail. Missing required tasks fail. A fresh output file is required.
+Use the existing `gate` as well for absolute quality and service budgets.
+
+Source-group bootstrap intervals remain descriptive; passing this gate is not a
+statistical noninferiority guarantee or server-weight attestation. Failed requests
+count as incorrect even when a prediction record contains matching residual text.
 
 ## What is verified
 

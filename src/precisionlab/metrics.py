@@ -61,6 +61,8 @@ def compare(samples, reference, candidate, *, repetitions=2000, seed=42, allow_i
     if repetitions < 100:
         raise ValueError("Use at least 100 bootstrap repetitions")
     ref, cand = index_predictions(reference, samples), index_predictions(candidate, samples)
+    if any(type(p.get("success", True)) is not bool for p in [*ref.values(), *cand.values()]):
+        raise ValueError("Prediction success flags must be booleans")
     scopes = {p.get("input_fingerprint_scope", "tensor") for p in [*ref.values(), *cand.values()]}
     if len(scopes) != 1:
         raise ValueError("Cannot compare request fingerprints with actual input-tensor fingerprints")
@@ -72,11 +74,11 @@ def compare(samples, reference, candidate, *, repetitions=2000, seed=42, allow_i
     cases = [{"id": s["id"], "group_id": s["group_id"], "task": s["task"],
               "answer": s["answer"], "image": s["image"], "prompt": s["prompt"], "reference": ref[s["id"]]["prediction"],
               "candidate": cand[s["id"]]["prediction"],
-              "before": exact(s["answer"], ref[s["id"]]["prediction"]),
-              "after": exact(s["answer"], cand[s["id"]]["prediction"]),
-              "reference_content_correct": semantic_correct(s, ref[s["id"]]["prediction"]),
-              "candidate_content_correct": semantic_correct(s, cand[s["id"]]["prediction"])} for s in samples]
-    semantic_cases = [dict(c, before=semantic_correct(s, c["reference"]), after=semantic_correct(s, c["candidate"])) for s, c in zip(samples, cases)]
+              "before": ref[s["id"]].get("success", True) and exact(s["answer"], ref[s["id"]]["prediction"]),
+              "after": cand[s["id"]].get("success", True) and exact(s["answer"], cand[s["id"]]["prediction"]),
+              "reference_content_correct": ref[s["id"]].get("success", True) and semantic_correct(s, ref[s["id"]]["prediction"]),
+              "candidate_content_correct": cand[s["id"]].get("success", True) and semantic_correct(s, cand[s["id"]]["prediction"])} for s in samples]
+    semantic_cases = [dict(c, before=c["reference_content_correct"], after=c["candidate_content_correct"]) for c in cases]
     semantic_tasks = {t: task_summary([r for r in semantic_cases if r["task"] == t], repetitions, seed) for t in sorted({r["task"] for r in cases})}
     graph_cases = [c for c in cases if c["task"] == "graph_edge"]
     format_rates = {}

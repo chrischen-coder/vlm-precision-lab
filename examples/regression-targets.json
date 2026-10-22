@@ -1,0 +1,5 @@
+{
+  "max_task_regressions": {"receipt_total.total_price": 0},
+  "max_task_loss_pp": {"receipt_total.total_price": 2},
+  "min_source_groups": 30
+}

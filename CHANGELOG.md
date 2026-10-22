@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 — 2026-10-22
+
+- Include public fixtures and reproduction material in the source distribution; CI runs its bundled tests outside the checkout.
+- Add paired `regression-gate` checks for new critical-task errors, observed quality loss and minimum source groups, with per-sample regression evidence.
+- Treat failed service predictions as incorrect in exact and semantic comparisons, even if residual text matches the label.
+
+
 ## 0.2.0
 
 - Evaluate streaming vision chat services on labelled images, keeping failed requests in quality and throughput counts.
