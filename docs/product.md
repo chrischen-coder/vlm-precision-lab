@@ -29,9 +29,12 @@ benchmark suite.
 ## What the first replay does and does not show
 
 The bundled historical BF16/AWQ predictions contain 300 questions from 150 generated
-source groups. The graph task goes from 41% to 33% exact match, with 11 newly wrong
-and 3 recovered answers; the other two diagnostic tasks stay at 100%. The CPU
-command recomputes that comparison and renders saved images; it runs no model.
+source groups. Graph-task literal exact match goes from 41% to 33%, with 11 new
+format violations and 3 recoveries. All 11 retain the correct endpoint set, such
+as `B,D` becoming `D,B` against the requested order. Endpoint-set correctness is
+50% → 53%, with zero new semantic endpoint errors. The two OCR tasks stay at 100%.
+This is a formatting regression, not evidence of worse graph understanding.
+The CPU command recomputes that comparison and renders saved images; it runs no model.
 See [original experiment record](../experiments/results/2026-10-03/README.md) and
 [raw report](../experiments/results/2026-10-03/p1-awq-report.json).
 

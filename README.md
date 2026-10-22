@@ -34,10 +34,13 @@ precisionlab compare --dataset examples/diagnostic-v2/samples.jsonl \
   --output replay.html
 ```
 
-Open `replay.html` in a browser. Expected: **300 questions, 150 source groups**;
-the graph task changes from **41% to 33%**, with **11 newly wrong answers and 3
-recoveries**. The two OCR tasks remain at 100%. Inspect the changed samples to see
-why the overall number alone is insufficient.
+Open `replay.html` in a browser. Expected: **300 questions, 150 source groups**.
+For the graph task, **literal exact match falls from 41% to 33%**: 11 new format
+violations and 3 recoveries. All 11 still name the correct endpoint set; for
+example `B,D` becomes `D,B`, violating the requested alphabetical order.
+**Endpoint-set correctness rises from 50% to 53%, with no new semantic endpoint
+errors.** Both OCR tasks stay at 100%. This example shows an output-format
+regression, not evidence of worse graph understanding; inspect both measures.
 
 This recomputes a report from saved HF model predictions on **generated diagnostic
 images**. It is not a new GPU benchmark, real-receipt evaluation or service release
