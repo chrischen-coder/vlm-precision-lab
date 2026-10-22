@@ -5,7 +5,7 @@ Distribution: GitHub Release, with a wheel, source distribution and SHA-256 chec
 Build from the final clean commit after its pull request has merged and CI has passed:
 
 ```sh
-python -m pip install build
+python -m pip install ".[test,data]" build
 python -m pytest -q
 python -m build
 python tools/check_sdist.py
