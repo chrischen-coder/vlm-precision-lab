@@ -118,6 +118,9 @@ def test_service_gate_exit_code_and_threshold_validation(labelled_images, servic
         main()
     assert raised.value.code == 2
     assert not json.loads(decision.read_text())["accepted"]
+    before = decision.read_bytes()
+    assert main() == 2
+    assert decision.read_bytes() == before
 
 
 def test_equal_requests_ignore_alias_but_never_masquerade_as_tensors(labelled_images):

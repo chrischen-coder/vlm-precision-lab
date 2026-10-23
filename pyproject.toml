@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vlm-precision-lab"
-version = "0.3.0"
+version = "0.3.1"
 description = "Check quantized vision models against image tasks and service budgets"
 requires-python = ">=3.11"
 license = "Apache-2.0"

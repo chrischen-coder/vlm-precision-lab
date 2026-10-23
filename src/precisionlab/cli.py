@@ -1,9 +1,11 @@
 import argparse
+from contextlib import ExitStack
 import json
+import sys
 from pathlib import Path
 
 from .calibration import select
-from .data import fingerprint, load_samples, read_jsonl, write_jsonl
+from .data import fingerprint, load_samples, read_jsonl
 from .metrics import compare
 from .provenance import validate_manifests
 from .repair import choose_recipe
@@ -11,7 +13,29 @@ from .report import render
 from .synthetic import generate
 
 
-def main():
+def _write_new_outputs(outputs):
+    """Reserve every destination before writing so a conflict leaves no partial result."""
+    for path, _ in outputs:
+        if path.exists() or path.is_symlink():
+            raise FileExistsError(f"Output already exists: {path}")
+    created = []
+    try:
+        with ExitStack() as stack:
+            streams = []
+            for path, text in outputs:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                stream = stack.enter_context(path.open("x", encoding="utf-8"))
+                created.append(path)
+                streams.append((stream, text))
+            for stream, text in streams:
+                stream.write(text)
+    except (OSError, UnicodeError):
+        for path in created:
+            path.unlink(missing_ok=True)
+        raise
+
+
+def _run(argv=None):
     p = argparse.ArgumentParser(description="Paired multimodal precision checks")
     sub = p.add_subparsers(dest="command", required=True)
     g = sub.add_parser("generate", help="Create original synthetic diagnostic fixtures")
@@ -26,18 +50,18 @@ def main():
     s.add_argument("--costs", type=Path, required=True)
     s.add_argument("--budget", type=int, required=True)
     s.add_argument("--strategy", choices=["random", "stratified", "coverage"], default="coverage")
-    s.add_argument("--output", type=Path, required=True)
+    s.add_argument("--output", type=Path, required=True, help="New JSONL selection; its .selection.json sidecar must also be new")
     c = sub.add_parser("compare", help="Report paired task regressions")
     c.add_argument("--dataset", type=Path, required=True)
     c.add_argument("--split", choices=["calibration", "dev", "test"], default="dev")
     c.add_argument("--reference", type=Path, required=True)
     c.add_argument("--candidate", type=Path, required=True)
-    c.add_argument("--output", type=Path, required=True)
+    c.add_argument("--output", type=Path, required=True, help="New HTML report; its .json sidecar must also be new")
     c.add_argument("--allow-input-change", action="store_true", help="Descriptive processor control only")
     r = sub.add_parser("choose", help="Select only measured, exported and reloaded recipes")
     r.add_argument("--candidates", type=Path, required=True)
     r.add_argument("--constraints", type=Path, required=True)
-    r.add_argument("--output", type=Path, required=True)
+    r.add_argument("--output", type=Path, required=True, help="New recipe decision file; never overwrite")
     e = sub.add_parser("evaluate", help="Measure quality and latency of a vision chat service")
     e.add_argument("--dataset", type=Path, required=True)
     e.add_argument("--endpoint", required=True, help="API base URL, e.g. http://localhost:8000/v1")
@@ -67,7 +91,7 @@ def main():
     q.add_argument("--candidate", type=Path, required=True, help="Candidate service run directory")
     q.add_argument("--constraints", type=Path, required=True)
     q.add_argument("--output", type=Path, required=True, help="New decision file; never overwrite")
-    a = p.parse_args()
+    a = p.parse_args(argv)
     if a.command == "generate":
         rows = generate(a.output, a.font, calibration=a.calibration, dev=a.dev, test=a.test, seed=a.seed)
         print(json.dumps({"samples": len(rows), "path": str(a.output / "samples.jsonl")}))
@@ -75,9 +99,11 @@ def main():
         rows = load_samples(a.dataset)
         costs = json.loads(a.costs.read_text())
         chosen, stats = select(rows, costs, a.budget, strategy=a.strategy)
-        write_jsonl(a.output, chosen)
         stats["dataset_sha256"] = fingerprint(rows, a.dataset)
-        a.output.with_suffix(".selection.json").write_text(json.dumps(stats, indent=2) + "\n")
+        _write_new_outputs((
+            (a.output, "".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in chosen)),
+            (a.output.with_suffix(".selection.json"), json.dumps(stats, indent=2) + "\n"),
+        ))
         print(json.dumps(stats))
     elif a.command == "compare":
         rows = [r for r in load_samples(a.dataset) if r["split"] == a.split]
@@ -91,11 +117,11 @@ def main():
         result["dataset_sha256"] = dataset_digest
         a.output.parent.mkdir(parents=True, exist_ok=True)
         render(result, a.output, dataset_root=a.dataset.parent)
+        print(f"Reports written to {a.output.resolve()} and {a.output.with_suffix('.json').resolve()}", file=sys.stderr)
         print(json.dumps(result["tasks"]))
     elif a.command == "choose":
         result = choose_recipe(json.loads(a.candidates.read_text()), **json.loads(a.constraints.read_text()))
-        a.output.parent.mkdir(parents=True, exist_ok=True)
-        a.output.write_text(json.dumps(result, indent=2) + "\n")
+        _write_new_outputs(((a.output, json.dumps(result, indent=2) + "\n"),))
         print(json.dumps(result))
     elif a.command == "import-cord":
         from .cord import import_cord
@@ -120,11 +146,25 @@ def main():
         from .gate import gate_service
         result = gate_service(a.dataset, a.run, json.loads(a.constraints.read_text()))
         a.output.parent.mkdir(parents=True, exist_ok=True)
-        a.output.write_text(json.dumps(result, indent=2) + "\n")
+        with a.output.open("x", encoding="utf-8") as stream:
+            stream.write(json.dumps(result, indent=2) + "\n")
         print(json.dumps({"accepted": result["accepted"], "failed": [c["metric"] for c in result["checks"] if not c["passed"]],
             "requests": result["requests"], "source_groups": result["source_groups"]}))
         raise SystemExit(0 if result["accepted"] else 2)
 
 
+def main(argv=None):
+    """Report input/output errors without obscuring them with a Python traceback."""
+    try:
+        _run(argv)
+        return 0
+    except FileExistsError as error:
+        print(f"precisionlab: {error}. Choose a new output path; existing results are kept.", file=sys.stderr)
+        return 2
+    except (OSError, ValueError, ImportError) as error:
+        print(f"precisionlab: {error}", file=sys.stderr)
+        return 2
+
+
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1 — 2026-10-23
+
+- Preserve comparison HTML/JSON, gate decisions, recipe decisions and calibration selections on repeated or conflicting output paths. Reserve both selection files before writing and fingerprint original inputs first.
+- Reject a comparison JSON filename that would collide with its HTML report.
+- Report expected input/output failures without a traceback and show report locations; add first-run connection and recovery guidance.
+
 ## 0.3.0 — 2026-10-22
 
 - Include public fixtures and reproduction material in the source distribution; CI runs its bundled tests outside the checkout.

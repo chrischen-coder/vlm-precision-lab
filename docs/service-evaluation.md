@@ -4,6 +4,10 @@ The client targets streaming vision chat endpoints compatible with vLLM's
 OpenAI chat API. Protocol tests run against a local fixture server; they are
 not GPU or model-quality benchmarks.
 
+For a first run without a service, use the README's **CPU replay**. It reads saved
+HF predictions and writes an HTML report plus JSON; it does not create the
+`manifest.json`, `profile.json` and API request records needed by a service gate.
+
 ## 1. Prepare images and labels
 
 Use one JSONL record per question. Paths are relative to the JSONL directory.
@@ -42,6 +46,19 @@ this shared-controls file. These declarations are not server attestation.
 Each run writes `predictions.jsonl`, `profile.json` and `manifest.json`.
 HTTP errors, missing stream termination and empty answers remain failed rows.
 A failed warmup aborts the benchmark; two warmup requests are used by default.
+
+Check connectivity with one question before starting a long run:
+
+```bash
+precisionlab evaluate --dataset samples.jsonl --endpoint http://localhost:8000/v1 --model model \
+  --limit 1 --warmup 0 --timeout 10 --output runs/connection-check
+```
+
+Inspect `profile.json` and `predictions.jsonl`, including `success` and `error_type`.
+This is a connection check, not a useful quality estimate. A failed request still
+produces a failed prediction row. Correct the endpoint/model or credentials and
+use a new output directory for the full run; do not reuse `connection-check` as
+the full benchmark. With normal warmup enabled, a failed warmup stops the run.
 
 | Metric | Definition |
 | --- | --- |
@@ -98,6 +115,32 @@ Before deciding, the gate checks source/prediction hashes, regenerates request
 fingerprints and recomputes scores and latency statistics from individual records.
 Optional `min_requests_per_second` adds a throughput floor. An observed pass
 is not a statistical non-inferiority guarantee or proof of weight identity.
+
+## Report paths and failed commands
+
+Use `--output comparison.html` for a comparison. The matching `comparison.json`
+contains machine-readable statistics. Open the HTML file relative to the working
+directory in which you ran the command. Use new names for subsequent runs.
+
+On main, comparison reports, calibration selections, recipe decisions and
+service decisions refuse to replace existing files. `select --output picked.jsonl`
+also needs a new `picked.selection.json`; both are checked before either is
+written. Comparison JSON sidecars receive the same protection. Operational errors
+return `2` with a short stderr message. With v0.3.0, choose unused output paths yourself. Never use a dataset or prediction file as an
+output path.
+
+| What happened | What to check |
+| --- | --- |
+| Input file missing or invalid JSON | Fix the path or JSON before connecting to a service. |
+| No samples in requested split | The default is `dev`; match `--split` to your JSONL rows. |
+| Image not found | Resolve its path from the dataset's directory, not the shell's directory. |
+| Output already exists | Use a new run directory or report filename; keep earlier results. |
+| Warmup failed | Check endpoint/model/access first; keep the real failures visible when evaluating. |
+| Gate rejects saved HF files | Run `evaluate` against the service; historical HF replay cannot supply service timings. |
+
+A gate's exit `2` can also mean measured requirements were not met. If a new
+decision JSON exists, inspect its failed checks. If no decision was written,
+inspect stderr for an input, provenance or output error.
 
 ## Receipt data
 
