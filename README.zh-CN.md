@@ -2,7 +2,7 @@
 
 对比两次视觉模型运行，逐条看清哪些答案变了。
 
-[English](README.md) · [打开历史结果演示](https://crown-sports.github.io/vlm-precision-lab/) · [服务评测步骤](docs/service-evaluation.md) · [v0.3.0 预览版](https://github.com/crown-sports/vlm-precision-lab/releases/tag/v0.3.0)
+[English](README.md) · [打开历史结果演示](https://crown-sports.github.io/vlm-precision-lab/) · [服务评测步骤](docs/service-evaluation.md) · [v0.3.1 预览版](https://github.com/crown-sports/vlm-precision-lab/releases/tag/v0.3.1)
 
 换模型、做量化、调整服务参数后，只看平均分很容易漏掉细节。Precision Lab 将同一批问题逐条配对，
 展示变化的答案，再按你设置的正确率和延迟要求检查结果。
@@ -26,7 +26,7 @@
 需要 Python 3.11+。仓库自带图片和预测，无需 GPU 或 API Key。
 
 ```bash
-git clone --branch v0.3.0 https://github.com/crown-sports/vlm-precision-lab.git
+git clone --branch v0.3.1 https://github.com/crown-sports/vlm-precision-lab.git
 cd vlm-precision-lab
 python -m venv .venv
 ```

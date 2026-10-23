@@ -2,7 +2,7 @@
 
 Compare two vision-model runs and inspect the answers that changed.
 
-[中文](README.zh-CN.md) · [Browse the recorded demo](https://crown-sports.github.io/vlm-precision-lab/) · [Service evaluation](docs/service-evaluation.md) · [v0.3.0 preview](https://github.com/crown-sports/vlm-precision-lab/releases/tag/v0.3.0)
+[中文](README.zh-CN.md) · [Browse the recorded demo](https://crown-sports.github.io/vlm-precision-lab/) · [Service evaluation](docs/service-evaluation.md) · [v0.3.1 preview](https://github.com/crown-sports/vlm-precision-lab/releases/tag/v0.3.1)
 
 When you change a model, quantization or serving settings, an average score only
 tells part of the story. Precision Lab pairs the same questions across runs,
@@ -28,7 +28,7 @@ failures are all format violations; there are **zero new semantic endpoint error
 Python 3.11+. The images and saved predictions are included; no GPU or API key is needed.
 
 ```bash
-git clone --branch v0.3.0 https://github.com/crown-sports/vlm-precision-lab.git
+git clone --branch v0.3.1 https://github.com/crown-sports/vlm-precision-lab.git
 cd vlm-precision-lab
 python -m venv .venv
 ```

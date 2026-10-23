@@ -126,8 +126,7 @@ On main, comparison reports, calibration selections, recipe decisions and
 service decisions refuse to replace existing files. `select --output picked.jsonl`
 also needs a new `picked.selection.json`; both are checked before either is
 written. Comparison JSON sidecars receive the same protection. Operational errors
-return `2` with a short stderr message. These protections follow v0.3.0; with that tag,
-choose unused output paths yourself. Never use a dataset or prediction file as an
+return `2` with a short stderr message. With v0.3.0, choose unused output paths yourself. Never use a dataset or prediction file as an
 output path.
 
 | What happened | What to check |
