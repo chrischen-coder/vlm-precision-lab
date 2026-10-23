@@ -1,16 +1,29 @@
 # VLM Precision Lab
 
-**模型换版或量化后，哪些图片答案变错了？先看具体样本，再按质量和服务预算决定是否放行。**
+对比两次视觉模型运行，逐条看清哪些答案变了。
 
-[English](README.md) · [历史结果演示](https://crown-sports.github.io/vlm-precision-lab/) · [价值与实现证据](docs/product.md) · [服务评测步骤](docs/service-evaluation.md)
+[English](README.md) · [打开历史结果演示](https://crown-sports.github.io/vlm-precision-lab/) · [服务评测步骤](docs/service-evaluation.md) · [v0.3.0 预览版](https://github.com/crown-sports/vlm-precision-lab/releases/tag/v0.3.0)
 
-适合比较基线模型、量化模型或新服务配置的工程师。权重文件变小，不代表部署更快；总体准确率不变，也可能是“修好一条、错掉另一条”，关键收据字段仍会退步。
+换模型、做量化、调整服务参数后，只看平均分很容易漏掉细节。Precision Lab 将同一批问题逐条配对，
+展示变化的答案，再按你设置的正确率和延迟要求检查结果。
 
-你会拿到能查看错误样本的配对 HTML 报告，以及按绝对质量／延迟和新增错误上限作出的 JSON 决策。先定需求，再看候选结果。
+## 同一个答案，要看两种口径
 
-## 第一次体验：CPU 重放已有结果
+![历史图任务：BF16 回答 B,D，AWQ 回答 D,B；两者端点都答对，但只有前者遵守了排序要求](docs/figures/recorded-case.png)
 
-需要 Python 3.11+。仓库自带图片和历史预测，无需 GPU、模型下载、正在运行的服务或 API Key。
+*2026-10-03 保存的 Qwen3-VL-8B 结果，输入是生成的诊断图片；问题要求按字母顺序回答。*
+
+`D,B` 找对了节点，但格式不符合要求。100 道图任务中，**严格字符串匹配率从 41% 降到 33%**，
+**忽略顺序的端点集合正确率从 50% 升到 53%**。新增的 11 条严格匹配失败全部是格式违例，
+**新增语义端点错误为 0**。
+
+![历史汇总：图任务严格匹配率 41% 到 33%，端点语义正确率 50% 到 53%，两个 OCR 任务均为 100%](docs/figures/p1-awq-metrics.png)
+
+*150 个来源组、300 个生成问题上的历史 HF 预测；两个 OCR 任务均保持 100%。[原始实验](experiments/results/2026-10-03/README.md)。*
+
+## 在 CPU 上重放这组结果
+
+需要 Python 3.11+。仓库自带图片和预测，无需 GPU 或 API Key。
 
 ```bash
 git clone --branch v0.3.0 https://github.com/crown-sports/vlm-precision-lab.git
@@ -18,7 +31,7 @@ cd vlm-precision-lab
 python -m venv .venv
 ```
 
-macOS/Linux 执行 `source .venv/bin/activate`；Windows PowerShell 执行 `.venv\Scripts\Activate.ps1`，再运行：
+macOS/Linux 执行 `source .venv/bin/activate`；PowerShell 执行 `.venv\Scripts\Activate.ps1`，然后：
 
 ```bash
 python -m pip install .
@@ -28,13 +41,11 @@ precisionlab compare --dataset examples/diagnostic-v2/samples.jsonl \
   --output replay.html
 ```
 
-用浏览器打开 `replay.html`。预期为 **300 个问题、150 个来源组**。图任务的**严格字符串匹配率从 41% 变成 33%**：11 条新增格式违例、3 条恢复。11 条违例的端点集合仍正确，例如 `B,D` 变成 `D,B`，违反了要求的字母排序。**端点集合正确率从 50% 升到 53%，新增语义端点错误为 0**；两个 OCR 任务仍为 100%。这个例子展示输出格式退步，不能据此声称图关系理解变差；应同时查看两种口径。
+打开 `replay.html` 查看对比。这会重新生成历史预测的报告，不会再次运行模型。要保留旧报告，请换一个输出文件名。
 
-这是在**合成诊断图片**上保存的历史 HF 模型预测重放，不是本次新跑的 GPU 测试、真实收据评测或服务上线门禁。[原始实验与局限](experiments/results/2026-10-03/README.md)。要保留不同报告，请使用不同输出文件名。
+## 接入自己的服务
 
-## 再接自己的服务
-
-按[完整输入格式与评测协议](docs/service-evaluation.md)准备标注图片、问题和目标，启动兼容的流式视觉对话服务：
+按[输入格式与评测指南](docs/service-evaluation.md)准备标注图片和质量、延迟要求，启动兼容的流式视觉对话服务：
 
 ```bash
 precisionlab evaluate --dataset samples.jsonl \
@@ -44,9 +55,10 @@ precisionlab gate --dataset samples.jsonl --run runs/quantized \
   --constraints targets.json --output runs/decision.json
 ```
 
-这里的 `samples.jsonl`、`targets.json` 是**需要你准备的文件**。`evaluate` 保存逐条预测、观测时延和清单；`gate` 达标返回 **0**，未达标返回 **2**。失败请求仍进入正确率分母，未约束字段会明确列出。
+`samples.jsonl` 和 `targets.json` 是你自己的文件。每次运行保存预测、时延和输入哈希，失败请求也计入正确率分母。
+`gate` 达标返回 `0`，不达标返回 `2`。
 
-要阻止关键字段新增错误，先用 `evaluate` 按相同对照条件生成基线和候选两份服务记录，再运行：
+如果还要防止“平均分没变，却新错了一个关键字段”，先用相同对照条件分别执行基线和候选的 `evaluate`，再运行：
 
 ```bash
 precisionlab regression-gate --dataset samples.jsonl \
@@ -54,25 +66,18 @@ precisionlab regression-gate --dataset samples.jsonl \
   --constraints regression-targets.json --output runs/regression-decision.json
 ```
 
-约束示例：`{"max_task_regressions":{"receipt_total_price":0}}`，字段名须匹配自己的 task。报告列出新增错误样本；缺少指定任务也拒绝。通过退出 **0**，拒绝退出 **2**；输出文件必须不存在。绝对准确率和服务预算仍用 `gate` 检查。上面的历史 HF 重放记录不能代替这两份服务运行。
+例如 `{"max_task_regressions":{"receipt_total_price":0}}` 要求该任务不能新增错误。
+任务名替换为自己数据中的名称，输出文件使用新路径。通过／拒绝的退出码为 `0`／`2`，绝对指标仍用 `gate` 检查。
+上面的历史 HF 文件用于重放，不能代替这里的服务记录。
 
-## 为什么值得用
+## 其他实验
 
-| 决策风险 | 当前实现 | 可核对的证据 |
-| --- | --- | --- |
-| 修好的样本掩盖新增关键错误 | 按样本配对，按任务限制新增错误 | [总体分数相同仍拒绝的测试](tests/test_regression_gate.py) |
-| 输入或对照参数变了却继续比较 | 检查哈希、重新生成请求指纹 | [来源核验](src/precisionlab/provenance.py)、[证据测试](tests/test_evidence.py) |
-| 失败请求从汇总里消失 | 从逐条记录重算成功率和预算 | [服务测试](tests/test_serving.py)、[指标定义](docs/service-evaluation.md) |
+已记录的 AWQ 运行将权重文件从 **17.53 GB 减到 7.22 GB**，但 HF 峰值 allocated 内存从
+**16.47 GiB 增到 20.26 GiB**。运行方式同样影响结果。[原始记录与复现步骤](docs/reproduce.md)。
 
-来源组统计区间用于描述，门禁通过不等于统计非劣性保证。API 指纹不能证明服务器内部权重相同。AWQ 来自 [LLM Compressor](https://github.com/vllm-project/llm-compressor)，本项目的工作是评测与证据核验。[现有优势、局限与未来需要积累的证据](docs/product.md)。
+CORD-v2 已导入 100 张收据、273 个字段问题；收据模型预测和受控 vLLM GPU 压测仍待补充。
+门禁结果描述的是这次测量，不能保证未来流量上的表现。
 
-## 已有证据
+[指标定义](docs/service-evaluation.md) · [实现说明](docs/product.md) · [测试](tests/) · [版本记录](CHANGELOG.md)
 
-- CPU 回归测试覆盖服务客户端、失败计数、证据核验和门禁。
-- CORD-v2 已导入 **100 张收据、273 个字段问题**，原始文件哈希已核对。
-- Qwen3-VL-8B AWQ 旧实验：文件 **17.53 → 7.22 GB**，HF 峰值 allocated **16.47 → 20.26 GiB**；该次运行文件更小但峰值内存更高。
-
-**真实收据上的模型预测、受控 vLLM GPU 压测尚未记录。**
-[原始实验](experiments/results/2026-10-03/) · [收据导入](docs/service-evaluation.md#receipt-data) · [GPU 复现](docs/reproduce.md)
-
-代码 Apache-2.0；模型与外部数据沿用各自许可。
+代码 Apache-2.0。AWQ 使用 [LLM Compressor](https://github.com/vllm-project/llm-compressor)，模型与外部数据沿用各自许可。
