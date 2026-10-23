@@ -45,6 +45,7 @@ precisionlab compare --dataset examples/diagnostic-v2/samples.jsonl \
 
 Open `replay.html` to inspect the comparison. This replays historical predictions;
 it does not run the model again. Use a different filename to keep previous reports.
+[Report paths and failed commands](docs/service-evaluation.md#report-paths-and-failed-commands).
 
 ## Evaluate your service
 

@@ -42,6 +42,7 @@ precisionlab compare --dataset examples/diagnostic-v2/samples.jsonl \
 ```
 
 打开 `replay.html` 查看对比。这会重新生成历史预测的报告，不会再次运行模型。要保留旧报告，请换一个输出文件名。
+[报告路径与失败恢复](docs/service-evaluation.md#report-paths-and-failed-commands)。
 
 ## 接入自己的服务
 

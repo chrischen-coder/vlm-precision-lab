@@ -8,6 +8,13 @@ from pathlib import Path
 
 
 def render(result, output, *, title="VLM precision regression", dataset_root=None):
+    output = Path(output)
+    metadata = output.with_suffix(".json")
+    if output.suffix.lower() == ".json":
+        raise ValueError("Use an HTML output path such as comparison.html; the JSON sidecar is written separately")
+    for path in (output, metadata):
+        if path.exists() or path.is_symlink():
+            raise FileExistsError(f"Report output already exists: {path}")
     overall = result["overall"]
     task_rows = "".join(f'<tr><td>{escape(task)}</td><td>{s["samples"]}</td><td>{s["reference_em"]:.1%}</td>'
         f'<td>{s["candidate_em"]:.1%}</td><td>{s["delta_pp"]:+.2f} pp</td><td>{s["regressions"]}</td><td>{s["recoveries"]}</td>'
@@ -50,5 +57,14 @@ th{{color:#57677d}}details{{margin:10px 0}}summary{{cursor:pointer}}pre{{white-s
 <p class="note">A reversed endpoint order can fail strict exact match while preserving the relationship. Do not call all strict-score loss a perception regression.</p></section>
 <section><h2>Reference-correct → candidate-wrong exact-match cases</h2>{failures or '<p>No paired regressions in this sample.</p>'}</section>
 <p class="note">Exact match preserves signs, punctuation and decimal precision. This report does not establish a mechanism, speedup or deployment readiness by itself.</p></main></html>'''
-    Path(output).write_text(html)
-    Path(output).with_suffix(".json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+    # Exclusive creation protects both files, including a destination created after the check.
+    created = []
+    try:
+        for path, text in ((output, html), (metadata, json.dumps(result, ensure_ascii=False, indent=2) + "\n")):
+            with path.open("x", encoding="utf-8") as stream:
+                created.append(path)
+                stream.write(text)
+    except (OSError, UnicodeError):
+        for path in created:
+            path.unlink(missing_ok=True)
+        raise

@@ -111,6 +111,5 @@ def test_cli_reject_exit_and_exclusive_output(runs, tmp_path, monkeypatch):
     assert raised.value.code == 2
     assert not json.loads(output.read_text())['accepted']
     before = output.read_bytes()
-    with pytest.raises(FileExistsError):
-        main()
+    assert main() == 2
     assert output.read_bytes() == before
