@@ -1,15 +1,38 @@
 import argparse
+from contextlib import ExitStack
 import json
 import sys
 from pathlib import Path
 
 from .calibration import select
-from .data import fingerprint, load_samples, read_jsonl, write_jsonl
+from .data import fingerprint, load_samples, read_jsonl
 from .metrics import compare
 from .provenance import validate_manifests
 from .repair import choose_recipe
 from .report import render
 from .synthetic import generate
+
+
+def _write_new_outputs(outputs):
+    """Reserve every destination before writing so a conflict leaves no partial result."""
+    for path, _ in outputs:
+        if path.exists() or path.is_symlink():
+            raise FileExistsError(f"Output already exists: {path}")
+    created = []
+    try:
+        with ExitStack() as stack:
+            streams = []
+            for path, text in outputs:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                stream = stack.enter_context(path.open("x", encoding="utf-8"))
+                created.append(path)
+                streams.append((stream, text))
+            for stream, text in streams:
+                stream.write(text)
+    except (OSError, UnicodeError):
+        for path in created:
+            path.unlink(missing_ok=True)
+        raise
 
 
 def _run(argv=None):
@@ -27,7 +50,7 @@ def _run(argv=None):
     s.add_argument("--costs", type=Path, required=True)
     s.add_argument("--budget", type=int, required=True)
     s.add_argument("--strategy", choices=["random", "stratified", "coverage"], default="coverage")
-    s.add_argument("--output", type=Path, required=True)
+    s.add_argument("--output", type=Path, required=True, help="New JSONL selection; its .selection.json sidecar must also be new")
     c = sub.add_parser("compare", help="Report paired task regressions")
     c.add_argument("--dataset", type=Path, required=True)
     c.add_argument("--split", choices=["calibration", "dev", "test"], default="dev")
@@ -38,7 +61,7 @@ def _run(argv=None):
     r = sub.add_parser("choose", help="Select only measured, exported and reloaded recipes")
     r.add_argument("--candidates", type=Path, required=True)
     r.add_argument("--constraints", type=Path, required=True)
-    r.add_argument("--output", type=Path, required=True)
+    r.add_argument("--output", type=Path, required=True, help="New recipe decision file; never overwrite")
     e = sub.add_parser("evaluate", help="Measure quality and latency of a vision chat service")
     e.add_argument("--dataset", type=Path, required=True)
     e.add_argument("--endpoint", required=True, help="API base URL, e.g. http://localhost:8000/v1")
@@ -76,9 +99,11 @@ def _run(argv=None):
         rows = load_samples(a.dataset)
         costs = json.loads(a.costs.read_text())
         chosen, stats = select(rows, costs, a.budget, strategy=a.strategy)
-        write_jsonl(a.output, chosen)
         stats["dataset_sha256"] = fingerprint(rows, a.dataset)
-        a.output.with_suffix(".selection.json").write_text(json.dumps(stats, indent=2) + "\n")
+        _write_new_outputs((
+            (a.output, "".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in chosen)),
+            (a.output.with_suffix(".selection.json"), json.dumps(stats, indent=2) + "\n"),
+        ))
         print(json.dumps(stats))
     elif a.command == "compare":
         rows = [r for r in load_samples(a.dataset) if r["split"] == a.split]
@@ -96,8 +121,7 @@ def _run(argv=None):
         print(json.dumps(result["tasks"]))
     elif a.command == "choose":
         result = choose_recipe(json.loads(a.candidates.read_text()), **json.loads(a.constraints.read_text()))
-        a.output.parent.mkdir(parents=True, exist_ok=True)
-        a.output.write_text(json.dumps(result, indent=2) + "\n")
+        _write_new_outputs(((a.output, json.dumps(result, indent=2) + "\n"),))
         print(json.dumps(result))
     elif a.command == "import-cord":
         from .cord import import_cord

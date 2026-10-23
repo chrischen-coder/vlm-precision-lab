@@ -122,9 +122,11 @@ Use `--output comparison.html` for a comparison. The matching `comparison.json`
 contains machine-readable statistics. Open the HTML file relative to the working
 directory in which you ran the command. Use new names for subsequent runs.
 
-On main, comparison reports and service decisions refuse to replace existing
-files, including an existing comparison JSON sidecar. Operational errors return
-`2` with a short stderr message. These protections follow v0.3.0; with that tag,
+On main, comparison reports, calibration selections, recipe decisions and
+service decisions refuse to replace existing files. `select --output picked.jsonl`
+also needs a new `picked.selection.json`; both are checked before either is
+written. Comparison JSON sidecars receive the same protection. Operational errors
+return `2` with a short stderr message. These protections follow v0.3.0; with that tag,
 choose unused output paths yourself. Never use a dataset or prediction file as an
 output path.
 
