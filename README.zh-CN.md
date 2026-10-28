@@ -2,7 +2,7 @@
 
 对比两次视觉模型运行，逐条看清哪些答案变了。
 
-[English](README.md) · [打开历史结果演示](https://crown-sports.github.io/vlm-precision-lab/) · [服务评测步骤](docs/service-evaluation.md) · [v0.3.1 预览版](https://github.com/crown-sports/vlm-precision-lab/releases/tag/v0.3.1)
+[English](README.md) · [打开历史结果演示](https://crown-sports.github.io/vlm-precision-lab/) · [真实收据实验](docs/cord-study.zh-CN.md) · [服务评测步骤](docs/service-evaluation.md) · [v0.3.1 预览版](https://github.com/crown-sports/vlm-precision-lab/releases/tag/v0.3.1)
 
 换模型、做量化、调整服务参数后，只看平均分很容易漏掉细节。Precision Lab 将同一批问题逐条配对，
 展示变化的答案，再按你设置的正确率和延迟要求检查结果。
@@ -44,6 +44,27 @@ precisionlab compare --dataset examples/diagnostic-v2/samples.jsonl \
 打开 `replay.html` 查看对比。这会重新生成历史预测的报告，不会再次运行模型。要保留旧报告，请换一个输出文件名。
 [报告路径与失败恢复](docs/service-evaluation.md#report-paths-and-failed-commands)。
 
+## 真实收据：显存下降，质量仍不放行
+
+独立的 **2026-10-05 CORD-v2 实验**在单张 RTX 5090 上记录了 14 组工作负载、
+3792 次计分请求，使用一致的 vLLM 设置和固定 2 GiB KV cache。AWQ 的整卡工作负载
+采样峰值从 **21.67 降到 12.11 GiB（−44.1%）**；开发集并发 1、4 的吞吐中位数分别
+提高 21.7%、12.5%，完整结果同时保留三次重复值与范围。
+
+**BF16 和 AWQ 都未通过预设的每字段 95% 质量门槛。** AWQ 新增两处总金额错误：
+`377,859 → 377,059`，以及把 Total `16,500` 回答成 Cash `50,000`。
+总金额配对区间为 [−3.16, +7.37] 个百分点，不能确认损失在预定 2 个百分点以内。
+因此，这次更小的部署仍未达到实验预先规定的放行要求。
+
+[中文案例与复现](docs/cord-study.zh-CN.md) ·
+[英文结果、原始预测与来源许可](experiments/results/2026-10-05/cord-service/)
+
+这些归档与核验代码位于 v0.3.1 之后的当前 `main`。在该源码中执行
+`python -m pip install '.[test,data]'` 和 `python -m pytest -q`，可在 CPU 上核对
+哈希、分数、配对区间和资源统计。**这不重新运行 GPU 推理，也不验证未打包的收据图片原件。**
+单设备顺序运行、未知预训练污染限制了结论；案例文档另列重新导入固定图片做完整离线分析、
+以及开展新 GPU 实验的步骤。
+
 ## 接入自己的服务
 
 按[输入格式与评测指南](docs/service-evaluation.md)准备标注图片和质量、延迟要求，启动兼容的流式视觉对话服务：
@@ -76,7 +97,6 @@ precisionlab regression-gate --dataset samples.jsonl \
 已记录的 AWQ 运行将权重文件从 **17.53 GB 减到 7.22 GB**，但 HF 峰值 allocated 内存从
 **16.47 GiB 增到 20.26 GiB**。运行方式同样影响结果。[原始记录与复现步骤](docs/reproduce.md)。
 
-CORD-v2 已导入 100 张收据、273 个字段问题；收据模型预测和受控 vLLM GPU 压测仍待补充。
 门禁结果描述的是这次测量，不能保证未来流量上的表现。
 
 [指标定义](docs/service-evaluation.md) · [实现说明](docs/product.md) · [测试](tests/) · [版本记录](CHANGELOG.md)

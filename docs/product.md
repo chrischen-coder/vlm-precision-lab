@@ -51,4 +51,9 @@ A maintained workload library with independently checked labels, controlled
 multi-engine/GPU comparisons and repeatable links between specific regressions
 and deployment settings would be valuable accumulated evidence. It does not yet
 exist here at production scale. The verified CORD import is data preparation,
-not model evaluation; controlled CORD service/GPU results remain unrecorded.
+not a production benchmark. The [archived CORD service study](cord-study.zh-CN.md)
+now provides one controlled BF16/AWQ deployment per variant: lower sampled memory
+and higher median throughput, but failed absolute quality targets and two new
+total-amount errors. This negative result demonstrates why resource gains alone
+cannot justify deployment. The frozen evidence and CPU checks preserve that
+conclusion; no new GPU run is implied by integrating or rechecking the archive.

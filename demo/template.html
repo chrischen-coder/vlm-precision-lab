@@ -101,9 +101,9 @@ h1{font-size:25px;margin-top:26px}
 <body>
 <main>
 <header>
-  <div class="topbar"><div class="brand">VLM Precision Lab<span class="replay">实验回放 · 2026-10-03</span></div><nav aria-label="项目链接"><a href="https://github.com/chrischen-coder/vlm-precision-lab/blob/main/README.zh-CN.md">项目说明</a><a href="https://github.com/chrischen-coder/vlm-precision-lab">GitHub ↗</a></nav></div>
+  <div class="topbar"><div class="brand">VLM Precision Lab<span class="replay">实验回放 · 2026-10-03</span></div><nav aria-label="项目链接"><a href="https://github.com/crown-sports/vlm-precision-lab/blob/main/README.zh-CN.md">项目说明</a><a href="https://github.com/crown-sports/vlm-precision-lab">GitHub ↗</a></nav></div>
   <h1>量化发布前，先检查答案和服务成本</h1>
-  <p class="intro">用自己的图片运行 <code>evaluate → compare → gate</code>，按质量和延迟目标放行或拒绝。<a href="https://github.com/chrischen-coder/vlm-precision-lab/blob/main/docs/service-evaluation.md">使用步骤 ↗</a><br>下方是 Qwen3-VL-8B 的 300 条合成回归记录，回放已保存的答案；真实收据模型结果与 vLLM GPU 压测尚未完成。</p>
+  <p class="intro">用自己的图片运行 <code>evaluate → compare → gate</code>，按质量和延迟目标放行或拒绝。<a href="https://github.com/crown-sports/vlm-precision-lab/blob/main/docs/service-evaluation.md">使用步骤 ↗</a><br>下方回放 Qwen3-VL-8B 的 300 条合成回归记录。另有 <a href="https://github.com/crown-sports/vlm-precision-lab/blob/main/docs/cord-study.zh-CN.md">3792 次真实收据请求的独立实验 ↗</a>：AWQ 显存采样峰值降低 44.1%，但两模型质量门槛均未通过，AWQ 新增两处金额错误。</p>
 </header>
 <noscript><p>本页需要 JavaScript 显示已保存的记录。原始预测和评分也可在 GitHub 实验目录中查看。</p></noscript>
 <section aria-label="选择任务与评分">
@@ -135,7 +135,7 @@ h1{font-size:25px;margin-top:26px}
 <section class="resources" aria-label="文件与运行内存">
   <h2>文件变小，运行内存也会变小吗？</h2>
   <div class="resource-grid"><div><div class="measure">权重文件 <strong id="weight-change"></strong><span>GB</span></div><p class="resource-note" id="weight-note"></p></div><div><div class="measure">峰值 Torch allocated <strong id="memory-change"></strong><span>GiB</span></div><p class="resource-note">HF 检查路径的内存增加。文件大小不能代替运行内存。</p></div></div>
-  <p class="resource-note">质量检查使用 batch=1，未测优化 INT4 服务引擎。全部记录来自合成开发数据；没有运行真实文档测试。</p>
+  <p class="resource-note">本页合成 HF 检查使用 batch=1，不测优化 INT4 服务引擎。独立的真实收据 vLLM 实验使用整卡 NVML 采样，不能与这里的 Torch allocated 指标混为一谈。</p>
 </section>
 <details class="evidence"><summary>查看原始问题、输入指纹与记录出处</summary><dl><dt>原始英文问题</dt><dd id="original-prompt"></dd><dt>样例 / 来源组</dt><dd><code id="source-group"></code></dd><dt>输入张量 SHA256</dt><dd><code id="input-hash"></code></dd><dt>原图 SHA256</dt><dd><code id="image-hash"></code></dd><dt>模型 revision</dt><dd><code id="model-revision"></code></dd></dl><div class="links"><a id="reference-link">BF16 原始预测</a><a id="candidate-link">AWQ 原始预测</a><a id="report-link">完整评分 JSON</a></div></details>
 <footer>这里回放的是已保存的模型输出，没有在线推理。共 300 条开发样例、150 个生成来源；每个来源有两条变体。</footer>
@@ -202,7 +202,7 @@ h1{font-size:25px;margin-top:26px}
   text('weight-note',`十进制 GB，减少 ${((1-after.weight_file_bytes/before.weight_file_bytes)*100).toFixed(1)}%。视觉模块与 lm_head 保持 BF16。`);
   text('memory-change',`${(before.peak_torch_allocated_bytes/2**30).toFixed(2)} → ${(after.peak_torch_allocated_bytes/2**30).toFixed(2)}`);
   text('model-revision',data.base_revision);
-  const base=`https://github.com/chrischen-coder/vlm-precision-lab/blob/${data.evidence_commit}/experiments/results/2026-10-03/`;
+  const base=`https://github.com/crown-sports/vlm-precision-lab/blob/${data.evidence_commit}/experiments/results/2026-10-03/`;
   $('reference-link').href=base+'p1-bf16/predictions.jsonl';$('candidate-link').href=base+'p1-awq-reload/predictions.jsonl';$('report-link').href=base+'p1-awq-report.json';
   render();
 })();

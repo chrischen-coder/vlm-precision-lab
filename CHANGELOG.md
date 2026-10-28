@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Integrate the frozen 2026-10-05 CORD-v2 service study: raw requests, checkpoint controls, NVML samples and five attributed review images. Both variants fail the quality gates; preserve two new total-amount errors and the unsupported 2 pp noninferiority conclusion.
+- Retain the null-only compressed-tensors metadata adapter, split-content checks, repeated-workload summaries and CPU evidence auditing from that experiment.
+- Reconcile the study with current comparison/regression gates and first-use documentation. Refresh README and recorded-demo links without rerunning GPU inference or changing archived evidence.
+
 ## 0.3.1 — 2026-10-23
 
 - Preserve comparison HTML/JSON, gate decisions, recipe decisions and calibration selections on repeated or conflicting output paths. Reserve both selection files before writing and fingerprint original inputs first.

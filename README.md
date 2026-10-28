@@ -2,7 +2,7 @@
 
 Compare two vision-model runs and inspect the answers that changed.
 
-[中文](README.zh-CN.md) · [Browse the recorded demo](https://crown-sports.github.io/vlm-precision-lab/) · [Service evaluation](docs/service-evaluation.md) · [v0.3.1 preview](https://github.com/crown-sports/vlm-precision-lab/releases/tag/v0.3.1)
+[中文](README.zh-CN.md) · [Browse the recorded demo](https://crown-sports.github.io/vlm-precision-lab/) · [Real-receipt study](experiments/results/2026-10-05/cord-service/) · [Service evaluation](docs/service-evaluation.md) · [v0.3.1 preview](https://github.com/crown-sports/vlm-precision-lab/releases/tag/v0.3.1)
 
 When you change a model, quantization or serving settings, an average score only
 tells part of the story. Precision Lab pairs the same questions across runs,
@@ -47,6 +47,31 @@ Open `replay.html` to inspect the comparison. This replays historical prediction
 it does not run the model again. Use a different filename to keep previous reports.
 [Report paths and failed commands](docs/service-evaluation.md#report-paths-and-failed-commands).
 
+## Real receipts: lower memory, but no quality approval
+
+The separate **2026-10-05 CORD-v2 study** records 3,792 measured requests across
+14 workloads on one RTX 5090, using matching vLLM controls and a fixed 2 GiB KV
+cache. AWQ reduced the sampled whole-device workload peak from **21.67 to 12.11
+GiB (−44.1%)**. Median dev throughput increased 21.7% at concurrency 1 and 12.5%
+at concurrency 4; the report includes all three repeat values and their ranges.
+
+**Both BF16 and AWQ failed the predeclared 95% per-field quality gates.** AWQ
+introduced two total-amount errors: `377,859 → 377,059` and Total `16,500 → Cash
+50,000`. The total-field paired interval [−3.16, +7.37] percentage points does
+not establish loss within the predeclared 2-point margin. A smaller deployment
+therefore did not qualify for release under this study's requirements.
+
+[English results, raw predictions and attribution](experiments/results/2026-10-05/cord-service/)
+· [中文案例与复现](docs/cord-study.zh-CN.md)
+
+The archive and its checks are in the current `main` source, after v0.3.1. In that
+checkout, `python -m pip install '.[test,data]'` and `python -m pytest -q` verify
+the archived hashes, scores, paired intervals and resource arithmetic on CPU.
+These checks **do not rerun GPU inference or verify the unbundled receipt images**.
+Single-device sequential runs and unknown pretraining contamination limit the
+conclusions. The detailed case explains how to reimport pinned image bytes for
+full offline analysis or separately run a new GPU experiment.
+
 ## Evaluate your service
 
 Prepare labeled image questions and your quality/latency targets using the
@@ -85,8 +110,6 @@ The recorded AWQ run reduced weight files from **17.53 to 7.22 GB**, but its HF
 peak allocated memory rose from **16.47 to 20.26 GiB**. The runtime matters too.
 [Raw runs and reproduction](docs/reproduce.md).
 
-CORD-v2 import includes 100 receipts and 273 field questions; model predictions
-on those receipts and controlled vLLM GPU benchmarks are still pending.
 A passing gate describes the measured run, not a guarantee about future traffic.
 
 [Metric definitions](docs/service-evaluation.md) · [Implementation notes](docs/product.md) · [Tests](tests/) · [Changelog](CHANGELOG.md)
