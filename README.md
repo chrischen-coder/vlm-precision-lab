@@ -2,7 +2,7 @@
 
 Compare two vision-model runs and inspect the answers that changed.
 
-[中文](README.zh-CN.md) · [Browse the recorded demo](https://crown-sports.github.io/vlm-precision-lab/) · [Real-receipt study](experiments/results/2026-10-05/cord-service/) · [Service evaluation](docs/service-evaluation.md) · [v0.3.1 preview](https://github.com/crown-sports/vlm-precision-lab/releases/tag/v0.3.1)
+[中文](README.zh-CN.md) · [Browse the recorded demo](https://crown-sports.github.io/vlm-precision-lab/) · [Real-receipt study](experiments/results/2026-10-05/cord-service/) · [Service evaluation](docs/service-evaluation.md) · [v0.4.0 research release](https://github.com/crown-sports/vlm-precision-lab/releases/tag/v0.4.0)
 
 When you change a model, quantization or serving settings, an average score only
 tells part of the story. Precision Lab pairs the same questions across runs,
@@ -28,7 +28,7 @@ failures are all format violations; there are **zero new semantic endpoint error
 Python 3.11+. The images and saved predictions are included; no GPU or API key is needed.
 
 ```bash
-git clone --branch v0.3.1 https://github.com/crown-sports/vlm-precision-lab.git
+git clone --branch v0.4.0 https://github.com/crown-sports/vlm-precision-lab.git
 cd vlm-precision-lab
 python -m venv .venv
 ```
@@ -64,8 +64,8 @@ therefore did not qualify for release under this study's requirements.
 [English results, raw predictions and attribution](experiments/results/2026-10-05/cord-service/)
 · [中文案例与复现](docs/cord-study.zh-CN.md)
 
-The archive and its checks are in the current `main` source, after v0.3.1. In that
-checkout, `python -m pip install '.[test,data]'` and `python -m pytest -q` verify
+The v0.4.0 source checkout and source distribution include the archive and its
+checks. Run `python -m pip install '.[test,data]'` and `python -m pytest -q` to verify
 the archived hashes, scores, paired intervals and resource arithmetic on CPU.
 These checks **do not rerun GPU inference or verify the unbundled receipt images**.
 Single-device sequential runs and unknown pretraining contamination limit the
@@ -112,6 +112,6 @@ peak allocated memory rose from **16.47 to 20.26 GiB**. The runtime matters too.
 
 A passing gate describes the measured run, not a guarantee about future traffic.
 
-[Metric definitions](docs/service-evaluation.md) · [Implementation notes](docs/product.md) · [Tests](tests/) · [Changelog](CHANGELOG.md)
+[Metric definitions](docs/service-evaluation.md) · [Implementation notes](docs/product.md) · [Tests](tests/) · [Release contents and verification](docs/releases/v0.4.0.md) · [Changelog](CHANGELOG.md)
 
 Apache-2.0. AWQ uses [LLM Compressor](https://github.com/vllm-project/llm-compressor); external models and datasets retain their own licenses.

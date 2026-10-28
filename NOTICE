@@ -9,6 +9,10 @@ Quantization kernels, AWQ scaling, packing and execution remain upstream work.
 https://github.com/vllm-project/llm-compressor
 
 The optional receipt adapter reads NAVER CLOVA CORD-v2 annotations and images
-under CC-BY-4.0. No source images or parquet data are bundled with this code.
+under CC-BY-4.0. The source archive includes five unmodified review images and
+annotation ledgers from the pinned CORD-v2 experiment, attributed to NAVER CLOVA
+and CORD dataset contributors. See the image-specific notice and hashes in
+experiments/results/2026-10-05/cord-service/review-images/NOTICE.md and the adjacent
+manual-review.json. Full image sets and source parquet data are not bundled.
 https://github.com/clovaai/cord
 https://huggingface.co/datasets/naver-clova-ix/cord-v2

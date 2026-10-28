@@ -2,7 +2,7 @@
 
 对比两次视觉模型运行，逐条看清哪些答案变了。
 
-[English](README.md) · [打开历史结果演示](https://crown-sports.github.io/vlm-precision-lab/) · [真实收据实验](docs/cord-study.zh-CN.md) · [服务评测步骤](docs/service-evaluation.md) · [v0.3.1 预览版](https://github.com/crown-sports/vlm-precision-lab/releases/tag/v0.3.1)
+[English](README.md) · [打开历史结果演示](https://crown-sports.github.io/vlm-precision-lab/) · [真实收据实验](docs/cord-study.zh-CN.md) · [服务评测步骤](docs/service-evaluation.md) · [v0.4.0 研究版](https://github.com/crown-sports/vlm-precision-lab/releases/tag/v0.4.0)
 
 换模型、做量化、调整服务参数后，只看平均分很容易漏掉细节。Precision Lab 将同一批问题逐条配对，
 展示变化的答案，再按你设置的正确率和延迟要求检查结果。
@@ -26,7 +26,7 @@
 需要 Python 3.11+。仓库自带图片和预测，无需 GPU 或 API Key。
 
 ```bash
-git clone --branch v0.3.1 https://github.com/crown-sports/vlm-precision-lab.git
+git clone --branch v0.4.0 https://github.com/crown-sports/vlm-precision-lab.git
 cd vlm-precision-lab
 python -m venv .venv
 ```
@@ -59,7 +59,7 @@ precisionlab compare --dataset examples/diagnostic-v2/samples.jsonl \
 [中文案例与复现](docs/cord-study.zh-CN.md) ·
 [英文结果、原始预测与来源许可](experiments/results/2026-10-05/cord-service/)
 
-这些归档与核验代码位于 v0.3.1 之后的当前 `main`。在该源码中执行
+v0.4.0 源码和源码发行包包含这些归档与核验代码。在其中执行
 `python -m pip install '.[test,data]'` 和 `python -m pytest -q`，可在 CPU 上核对
 哈希、分数、配对区间和资源统计。**这不重新运行 GPU 推理，也不验证未打包的收据图片原件。**
 单设备顺序运行、未知预训练污染限制了结论；案例文档另列重新导入固定图片做完整离线分析、
@@ -99,6 +99,6 @@ precisionlab regression-gate --dataset samples.jsonl \
 
 门禁结果描述的是这次测量，不能保证未来流量上的表现。
 
-[指标定义](docs/service-evaluation.md) · [实现说明](docs/product.md) · [测试](tests/) · [版本记录](CHANGELOG.md)
+[指标定义](docs/service-evaluation.md) · [实现说明](docs/product.md) · [测试](tests/) · [发行内容与核验](docs/releases/v0.4.0.md) · [版本记录](CHANGELOG.md)
 
 代码 Apache-2.0。AWQ 使用 [LLM Compressor](https://github.com/vllm-project/llm-compressor)，模型与外部数据沿用各自许可。
